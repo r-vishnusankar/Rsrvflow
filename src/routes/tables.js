@@ -1,6 +1,28 @@
 const router = require('express').Router();
 const { z } = require('zod');
 const { prisma, requireAuth, requireAdmin } = require('../middleware/auth');
+const { z } = require('zod');
+
+// GET /api/tables/public — public floor plan info (no auth)
+router.get('/public', async (req, res) => {
+  const { orgSlug } = req.query;
+  if (!orgSlug) return res.status(400).json({ error: 'orgSlug required' });
+  try {
+    const org = await prisma.organization.findUnique({ where: { slug: orgSlug } });
+    if (!org) return res.status(404).json({ error: 'Org not found' });
+    const tables = await prisma.floorTable.findMany({
+      where: { organizationId: org.id },
+      select: {
+        id: true, code: true, x: true, y: true, r: true, w: true, h: true,
+        zone: true, status: true, tableType: true
+      },
+      orderBy: { id: 'asc' }
+    });
+    res.json(tables.map(t => ({ ...t, status: t.status.toLowerCase(), type: t.tableType })));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch public tables' });
+  }
+});
 
 // Helper: convert Prisma table row → frontend shape
 function tableToFrontend(t) {

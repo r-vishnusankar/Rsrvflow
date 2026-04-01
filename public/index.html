@@ -46,7 +46,8 @@ svg.ic{display:inline-block;vertical-align:-.2em;flex-shrink:0;color:inherit}
 #nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(13,17,23,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
 .nav-logo{font-size:18px;font-weight:600;color:var(--accent);letter-spacing:-0.3px}
 .nav-logo span{color:var(--text);font-weight:400}
-.nav-tabs{display:flex;gap:2px}
+.nav-tabs{display:none;gap:2px}
+.nav-tabs.is-auth{display:flex}
 .ntab{padding:6px 14px;border-radius:var(--rs);font-size:13px;font-weight:500;color:var(--text2);background:transparent;border:none;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
 .ntab:hover{color:var(--text);background:var(--surf2)}
 .ntab.active{background:var(--accent-dim);color:var(--accent)}
@@ -239,7 +240,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
   <div class="nav-right">
     <div id="staff-badge" style="display:none;align-items:center;gap:6px;padding:4px 10px;background:var(--blue-dim);color:var(--blue);border-radius:20px;font-size:12px;font-weight:500"></div>
     <button type="button" id="btn-logout" class="btn btn-ghost btn-sm" style="display:none" onclick="adminLogout()"><svg class="ic" width="16" height="16" aria-hidden="true"><use href="#icon-log-out"/></svg> Logout</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="showQR()"><svg class="ic" width="18" height="18" aria-hidden="true"><use href="#icon-qr"/></svg> QR</button>
+    <button type="button" id="btn-qr" class="btn btn-ghost btn-sm" style="display:none" onclick="showQR()"><svg class="ic" width="18" height="18" aria-hidden="true"><use href="#icon-qr"/></svg> QR</button>
   </div>
 </nav>
 
@@ -288,6 +289,9 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
         </div>
         <button type="button" class="btn btn-primary btn-lg" onclick="joinQueue(this)" style="width:100%;justify-content:center">Join Queue <svg class="ic" width="18" height="18" aria-hidden="true"><use href="#icon-arrow-right"/></svg></button>
       </div>
+      <div style="text-align:center;margin-top:24px;padding-top:12px;border-top:1px solid var(--border)">
+        <a href="javascript:void(0)" onclick="showPage('staff')" style="color:var(--text3);font-size:11px;text-decoration:none;opacity:0.6">Staff Login</a>
+      </div>
     </div>
 
     <!-- Queue status + floor view -->
@@ -323,8 +327,9 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
             <span style="font-weight:500" id="qs-table-zone">-</span>
           </div>
         </div>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <button class="btn btn-ghost btn-sm" onclick="leaveQueue(this)" style="width:100%;justify-content:center">Leave Queue</button>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="resetCustomerSession()" style="width:100%;justify-content:center">New Booking</button>
+          <button class="btn btn-ghost btn-xs" onclick="leaveQueue(this)" style="width:100%;justify-content:center;color:var(--text3)">Leave Queue</button>
         </div>
       </div>
 
@@ -488,10 +493,14 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
       UAT credentials:<br>
       admin@spicegarden.com / Admin1234!
     </div>
+    <div style="text-align:center;margin-top:14px;font-size:12px">
+      <a href="#" onclick="showPage('staff');closeModal('admin-login-modal')">Staff Login</a>
+    </div>
   </div>
 </div>
 
 <!-- QR MODAL -->
+
 <div id="qr-modal" class="modal-bg" style="display:none" onclick="closeQR(event)">
   <div class="modal" style="text-align:center;max-width:340px">
     <h3 style="text-align:center;display:flex;align-items:center;justify-content:center;gap:10px"><svg class="ic" width="22" height="22" aria-hidden="true"><use href="#icon-qr"/></svg> Customer QR Code</h3>
@@ -599,6 +608,11 @@ function setLoading(btn, isLoading) {
     btn.disabled = false;
     btn.classList.remove('loading');
   }
+}
+function resetCustomerSession() {
+  custSessionToken = null;
+  sessionStorage.removeItem('tf_cust_token');
+  location.reload();
 }
 
 // ============================================================
@@ -905,12 +919,14 @@ function renderAdminSidebar() {
   const av = S.tables.filter(t => t.status==='available').length;
   const oc = S.tables.filter(t => t.status==='occupied').length;
   const cl = S.tables.filter(t => t.status==='cleaning').length;
-  document.getElementById('stat-wait')?.textContent !== undefined && (() => {
-    document.getElementById('stat-wait').textContent  = wt;
+  
+  const sWait = document.getElementById('stat-wait');
+  if (sWait) {
+    sWait.textContent = wt;
     document.getElementById('stat-avail').textContent = av;
-    document.getElementById('stat-occ').textContent   = oc;
+    document.getElementById('stat-occ').textContent = oc;
     document.getElementById('stat-clean').textContent = cl;
-  })();
+  }
 
   const aqEl = document.getElementById('admin-queue');
   if (!aqEl) return;
@@ -1002,6 +1018,11 @@ async function pollCustomerStatus() {
   if (!custSessionToken) return;
   try {
     const c = await fetch(`/api/queue/status?token=${custSessionToken}`).then(r => r.json());
+    if (c.status === 'seated' || c.status === 'notified') {
+       if (!S.tables.length) {
+         S.tables = await fetch(`/api/tables/public?orgSlug=${ORG_SLUG}`).then(r => r.json());
+       }
+    }
     renderCustomerView(c);
   } catch { /* network hiccup, retry next poll */ }
 }
@@ -1115,8 +1136,8 @@ async function staffLoginSubmit(btn) {
     await loadState();
     document.getElementById('staff-pin-screen').style.display  = 'none';
     document.getElementById('staff-dash').style.display        = 'block';
-    document.getElementById('staff-badge').style.display       = 'flex';
     document.getElementById('staff-badge').textContent         = `${authUser.name || authUser.email} (${authUser.role})`;
+    updateNavAuth();
     renderStaffDash();
   } catch (err) {
     if(errEl) errEl.textContent = err.message || 'Login failed';
@@ -1133,6 +1154,7 @@ function staffLogout() {
   document.getElementById('staff-pin-screen').style.display  = 'block';
   document.getElementById('staff-dash').style.display        = 'none';
   document.getElementById('staff-badge').style.display       = 'none';
+  updateNavAuth();
 }
 
 function staffFilter(f) {
@@ -1205,6 +1227,7 @@ async function adminLoginSubmit(btn) {
     await loadState();
     drawFloor('floor-svg');
     renderAdminSidebar();
+    updateNavAuth();
     toast(`Logged in as ${authUser.name || authUser.email}`, 'success');
   } catch (err) {
     if(errEl) errEl.textContent = err.message || 'Login failed';
@@ -1219,6 +1242,7 @@ function adminLogout() {
   sessionStorage.removeItem('tf_user');
   sessionStorage.removeItem('tf_org');
   S.tables = []; S.queue = [];
+  updateNavAuth();
   showPage('customer');
   toast('Logged out', 'success');
 }
@@ -1289,6 +1313,13 @@ function showPage(p) {
 function updateNavAuth() {
   const logoutBtn = document.getElementById('btn-logout');
   if (logoutBtn) logoutBtn.style.display = authToken ? 'inline-flex' : 'none';
+
+  const tabs = document.querySelector('.nav-tabs');
+  if (tabs) tabs.classList.toggle('is-auth', !!authToken);
+  
+  const qrBtn = document.getElementById('btn-qr');
+  if (qrBtn) qrBtn.style.display = authToken ? 'inline-flex' : 'none';
+
   const badge = document.getElementById('staff-badge');
   if (badge && authUser) {
     badge.style.display = 'flex';
