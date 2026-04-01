@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: tableflow-saas
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate
+    startCommand: npx prisma migrate deploy && node src/server.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set this in the Render dashboard manually with your Neon URL
+      - key: JWT_SECRET
+        sync: false # Set a long random string
+      - key: GROQ_API_KEY
+        sync: false # Set your Groq API key
+      - key: NODE_ENV
+        value: staging
+      - key: PORT
+        value: 10000
+
