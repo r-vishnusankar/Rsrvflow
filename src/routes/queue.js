@@ -101,7 +101,7 @@ router.get('/status', async (req, res) => {
       const t = await prisma.floorTable.findFirst({
         where: { id: customer.tableId, organizationId: customer.organizationId },
       });
-      if (t) tableInfo = { id: t.id, zone: t.zone };
+      if (t) tableInfo = { id: t.id, code: t.code, zone: t.zone };
     }
 
     res.json({
@@ -255,7 +255,7 @@ router.post('/auto-assign', requireAuth, async (req, res) => {
         prisma.queueEntry.deleteMany({ where: { customerId: c.id } }),
       ]);
 
-      assigned.push({ customerId: c.id, customerName: c.name, tableId: t.id });
+      assigned.push({ customerId: c.id, customerName: c.name, tableId: t.id, tableCode: t.code });
     }
 
     await reorderQueue(req.user.orgId);

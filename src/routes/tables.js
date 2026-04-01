@@ -58,7 +58,14 @@ router.patch('/:id', requireAuth, async (req, res) => {
 
     const { status, guestName, occupantId } = parse.data;
     const data = {};
-    if (status !== undefined) data.status = status.toUpperCase();
+    if (status !== undefined) {
+      data.status = status.toUpperCase();
+      // Auto-clear guest info if marking as available or cleaning
+      if (data.status === 'AVAILABLE' || data.status === 'CLEANING') {
+        data.guestName = null;
+        data.occupantId = null;
+      }
+    }
     if (guestName !== undefined) data.guestName = guestName;
     if (occupantId !== undefined) data.occupantId = occupantId;
 

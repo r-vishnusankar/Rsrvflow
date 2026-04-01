@@ -181,6 +181,18 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
   .stats-row{grid-template-columns:repeat(2,1fr)}
   .ntab .ntab-txt{display:none}
 }
+
+/* LOADING STATES */
+.loading { position: relative; transition: all 0.2s; color: transparent !important; pointer-events: none; }
+.loading::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
+  margin: -9px 0 0 -9px; border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: currentColor; border-radius: 50%;
+  animation: tf-spin 0.6s linear infinite;
+}
+.btn-primary.loading::after { border-top-color: #0d1117; }
+.btn-ghost.loading::after { border-top-color: var(--text2); }
+@keyframes tf-spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -274,7 +286,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
             <button class="pgbtn" data-s="10" onclick="pickParty(10)">10</button>
           </div>
         </div>
-        <button type="button" class="btn btn-primary btn-lg" onclick="joinQueue()" style="width:100%;justify-content:center">Join Queue <svg class="ic" width="18" height="18" aria-hidden="true"><use href="#icon-arrow-right"/></svg></button>
+        <button type="button" class="btn btn-primary btn-lg" onclick="joinQueue(this)" style="width:100%;justify-content:center">Join Queue <svg class="ic" width="18" height="18" aria-hidden="true"><use href="#icon-arrow-right"/></svg></button>
       </div>
     </div>
 
@@ -312,7 +324,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
           </div>
         </div>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <button class="btn btn-ghost btn-sm" onclick="leaveQueue()" style="width:100%;justify-content:center">Leave Queue</button>
+          <button class="btn btn-ghost btn-sm" onclick="leaveQueue(this)" style="width:100%;justify-content:center">Leave Queue</button>
         </div>
       </div>
 
@@ -354,7 +366,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
       </div>
 
       <div style="display:flex;flex-direction:column;gap:8px">
-        <button type="button" id="btn-llm-assign" class="btn btn-primary" style="width:100%;justify-content:center" onclick="llmAutoAssign()">
+        <button type="button" id="btn-llm-assign" class="btn btn-primary" style="width:100%;justify-content:center" onclick="llmAutoAssign(this)">
           <svg class="ic" width="18" height="18" aria-hidden="true"><use href="#icon-sparkles"/></svg> LLM Auto-Assign
         </button>
         <button type="button" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="ruleAutoAssign()">
@@ -429,7 +441,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
       <div><label>Email</label><input type="email" id="staff-email" placeholder="staff@spicegarden.com" autocomplete="username"></div>
       <div><label>Password</label><input type="password" id="staff-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') staffLoginSubmit()"></div>
       <div id="staff-login-error" style="color:var(--red);font-size:12px;min-height:16px"></div>
-      <button type="button" class="btn btn-primary" style="width:100%;justify-content:center" onclick="staffLoginSubmit()">Sign In</button>
+      <button type="button" class="btn btn-primary" style="width:100%;justify-content:center" onclick="staffLoginSubmit(this)">Sign In</button>
     </div>
     <div style="text-align:center;margin-top:18px;color:var(--text3);font-size:11px;line-height:1.6">
       UAT credentials:<br>
@@ -470,7 +482,7 @@ label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bot
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="showPage('customer')">Cancel</button>
-      <button class="btn btn-primary" onclick="adminLoginSubmit()">Sign In</button>
+      <button class="btn btn-primary" onclick="adminLoginSubmit(this)">Sign In</button>
     </div>
     <div style="text-align:center;margin-top:14px;color:var(--text3);font-size:11px;line-height:1.6">
       UAT credentials:<br>
@@ -577,6 +589,17 @@ function iconRef(id, w) {
 function tFmt(ts) { if(!ts) return '—'; return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
 function ago(ts)  { if(!ts) return ''; const d=Math.floor((Date.now()-ts)/60000); return d<1?'Just now':d===1?'1 min ago':d+' mins ago'; }
 function waitEst(pos) { return Math.max(5, pos * 7); }
+function setLoading(btn, isLoading) {
+  if (!btn) return;
+  if (isLoading) {
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.dataset.oldHtml = btn.innerHTML;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
 
 // ============================================================
 // TOAST
@@ -651,14 +674,14 @@ function drawTable(svg, t, isHighlighted, isSelected, interactive) {
     const stroke = isSelected ? 'var(--accent)' : c.stroke;
     const sw     = isSelected ? '2' : '1';
     svgEl('rect', { x:t.x, y:t.y, width:t.w||52, height:t.h||38, rx: t.type==='booth'?4:6, fill:c.fill, stroke, 'stroke-width':sw }, g);
-    svgTx(t.id, { x:t.x+(t.w||52)/2, y:t.y+(t.h||38)/2-5, 'text-anchor':'middle', 'dominant-baseline':'central', 'font-size':'10', 'font-weight':'600', fill:c.text, 'font-family':'var(--font)' }, g);
+    svgTx(t.code, { x:t.x+(t.w||52)/2, y:t.y+(t.h||38)/2-5, 'text-anchor':'middle', 'dominant-baseline':'central', 'font-size':'10', 'font-weight':'600', fill:c.text, 'font-family':'var(--font)' }, g);
     if (t.guest) svgTx(t.guest.split(' ')[0], { x:t.x+(t.w||52)/2, y:t.y+(t.h||38)/2+7, 'text-anchor':'middle', 'font-size':'8', fill:c.text, 'font-family':'var(--font)' }, g);
     if (!t.guest && t.status==='available') svgTx(`${t.seats}p`, { x:t.x+(t.w||52)/2, y:t.y+(t.h||38)/2+7, 'text-anchor':'middle', 'font-size':'8', fill:'var(--text3)', 'font-family':'var(--font)' }, g);
   } else {
     const stroke = isSelected ? 'var(--accent)' : c.stroke;
     const sw     = isSelected ? '2' : '1';
     svgEl('circle', { cx:t.x, cy:t.y, r:t.r||30, fill:c.fill, stroke, 'stroke-width':sw }, g);
-    svgTx(t.id, { x:t.x, y:t.y-4, 'text-anchor':'middle', 'dominant-baseline':'central', 'font-size':'10', 'font-weight':'600', fill:c.text, 'font-family':'var(--font)' }, g);
+    svgTx(t.code, { x:t.x, y:t.y-4, 'text-anchor':'middle', 'dominant-baseline':'central', 'font-size':'10', 'font-weight':'600', fill:c.text, 'font-family':'var(--font)' }, g);
     if (t.guest) svgTx(t.guest.split(' ')[0], { x:t.x, y:t.y+6, 'text-anchor':'middle', 'font-size':'8', fill:c.text, 'font-family':'var(--font)' }, g);
     if (!t.guest && t.status==='available') svgTx(`${t.seats}p`, { x:t.x, y:t.y+6, 'text-anchor':'middle', 'font-size':'8', fill:'var(--text3)', 'font-family':'var(--font)' }, g);
   }
@@ -678,7 +701,7 @@ function clickTable(id) {
   const statusOpts = ['available','occupied','cleaning','reserved'];
   panel.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-size:15px;font-weight:600">Table ${t.id}</div>
+      <div style="font-size:15px;font-weight:600">Table ${t.code}</div>
       <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${t.seats} seats · ${t.zone} · ${t.label}</div>
@@ -689,9 +712,9 @@ function clickTable(id) {
       </select>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="applyStatusChange()">Apply Status</button>
+      <button class="btn btn-primary btn-sm" onclick="applyStatusChange(this)">Apply Status</button>
       ${t.status==='available' ? `<button class="btn btn-green btn-sm" onclick="openAssignModal('${t.id}')">Assign Guest</button>` : ''}
-      ${t.status==='occupied'  ? `<button class="btn btn-amber btn-sm" onclick="clearTable('${t.id}')">Clear Table</button>` : ''}
+      ${t.status==='occupied'  ? `<button class="btn btn-amber btn-sm" onclick="clearTable('${t.id}', this)">Clear Table</button>` : ''}
     </div>`;
 }
 
@@ -701,11 +724,16 @@ function closeDetail() {
   drawFloor('floor-svg');
 }
 
-async function applyStatusChange() {
-  if (!S.selectedTable) return;
-  const ns = document.getElementById('detail-status')?.value;
-  if (!ns) return;
-  await setTableStatus(S.selectedTable, ns);
+async function applyStatusChange(btn) {
+  const tableId = S.selectedTable;
+  const status  = document.getElementById('detail-status')?.value;
+  if (!tableId || !status) return;
+  setLoading(btn, true);
+  try {
+    await setTableStatus(tableId, status);
+  } finally {
+    setLoading(btn, false);
+  }
 }
 
 async function setTableStatus(id, status) {
@@ -715,8 +743,8 @@ async function setTableStatus(id, status) {
     });
     const idx = S.tables.findIndex(x => x.id === id);
     if (idx !== -1) S.tables[idx] = updated;
-    logAct(`Table ${id} → ${status}`, iconRef('icon-dot', 16));
-    toast(`Table ${id} marked ${status}`, 'success');
+    logAct(`Table ${S.tables.find(x => x.id === id)?.code || id} → ${status}`, iconRef('icon-dot', 16));
+    toast(`Table ${S.tables.find(x => x.id === id)?.code || id} marked ${status}`, 'success');
     drawFloor('floor-svg');
     renderAdminSidebar();
     renderStaffDash();
@@ -726,18 +754,21 @@ async function setTableStatus(id, status) {
   }
 }
 
-async function clearTable(id) {
+async function clearTable(id, btn) {
+  setLoading(btn, true);
   try {
     const updated = await apiFetch(`/api/tables/${id}/clear`, { method: 'POST' });
     const idx = S.tables.findIndex(x => x.id === id);
     if (idx !== -1) S.tables[idx] = updated;
-    logAct(`Table ${id} cleared → cleaning`, iconRef('icon-brush', 16));
-    toast(`Table ${id} cleared`, 'success');
+    logAct(`Table ${S.tables.find(x => x.id === id)?.code || id} cleared → cleaning`, iconRef('icon-brush', 16));
+    toast(`Table ${S.tables.find(x => x.id === id)?.code || id} cleared`, 'success');
     closeDetail();
     drawFloor('floor-svg');
     renderAdminSidebar();
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    setLoading(btn, false);
   }
 }
 
@@ -758,7 +789,7 @@ function openAssignModal(tableId) {
     return;
   }
   content.innerHTML = q.map(c => `
-    <div class="qitem" style="cursor:pointer" onclick="doAssign('${c.id}','${tableId||''}')">
+    <div class="qitem" style="cursor:pointer" onclick="doAssign('${c.id}','${tableId||''}', this.querySelector('button'))">
       <div class="qnum">${q.indexOf(c)+1}</div>
       <div class="qinfo">
         <div class="qname">${c.name}</div>
@@ -782,31 +813,32 @@ function openAssignForCustomer(custId) {
   document.getElementById('assign-content').innerHTML = `
     <div style="font-size:13px;font-weight:500;margin-bottom:10px">Choose table for ${c.name} (party of ${c.partySize})</div>
     ${avail.length === 0 ? '<div style="color:var(--text2)">No available tables.</div>' : avail.map(t => `
-    <div class="qitem" style="cursor:pointer" onclick="doAssign('${c.id}','${t.id}')">
-      <div class="qinfo"><div class="qname">Table ${t.id}</div><div class="qsub">${t.seats} seats · ${t.zone}</div></div>
+    <div class="qitem" style="cursor:pointer" onclick="doAssign('${c.id}','${t.id}', this.querySelector('button'))">
+      <div class="qinfo"><div class="qname">Table ${t.code}</div><div class="qsub">${t.seats} seats · ${t.zone}</div></div>
       <button class="btn btn-primary btn-sm">Assign</button>
     </div>`).join('')}`;
 }
 
-async function doAssign(custId, tableId) {
-  document.getElementById('assign-modal').style.display = 'none';
-  if (!tableId) { toast('Select a table first', 'error'); return; }
-  await assignCustomer(custId, tableId);
-}
-
-async function assignCustomer(custId, tableId) {
+async function doAssign(custId, tableId, btn) {
+  if (!custId || !tableId) return;
+  setLoading(btn, true);
   try {
     await apiFetch('/api/queue/assign', {
-      method: 'POST', body: JSON.stringify({ customerId: custId, tableId }),
+      method: 'POST',
+      body: JSON.stringify({ customerId: custId, tableId }),
     });
     await loadState();
     const c = S.queue.find(x => x.id === custId) || { name: 'Customer' };
-    logAct(`${c.name} → Table ${tableId}`, iconRef('icon-circle-check', 16));
-    toast(`${c.name} assigned to Table ${tableId}`, 'success');
+    const tCode = S.tables.find(x => x.id === tableId)?.code || tableId;
+    logAct(`${c.name} → Table ${tCode}`, iconRef('icon-circle-check', 16));
+    toast(`${c.name} assigned to Table ${tCode}`, 'success');
     drawFloor('floor-svg');
     renderAdminSidebar();
+    document.getElementById('assign-modal').style.display = 'none';
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    setLoading(btn, false);
   }
 }
 
@@ -819,20 +851,19 @@ async function doAutoAssign() {
     const res = await apiFetch('/api/queue/auto-assign', { method: 'POST' });
     if (res.assigned?.length) {
       await loadState();
-      res.assigned.forEach(a => logAct(`Auto-seated ${a.customerName} → Table ${a.tableId}`, iconRef('icon-zap', 16)));
+      res.assigned.forEach(a => logAct(`Auto-seated ${a.customerName} → Table ${a.tableCode || a.tableId}`, iconRef('icon-zap', 16)));
       drawFloor('floor-svg');
       renderAdminSidebar();
     }
   } catch { /* non-fatal */ }
 }
 
-async function llmAutoAssign() {
+async function llmAutoAssign(btn) {
   if (!S.queue.length)  { toast('No customers in queue', 'error'); return; }
   const avail = S.tables.filter(t => t.status === 'available');
   if (!avail.length)    { toast('No tables available', 'error'); return; }
 
-  const btn = document.getElementById('btn-llm-assign');
-  if (btn) { btn.disabled = true; btn.innerHTML = `${iconRef('icon-sparkles')} Thinking…`; }
+  setLoading(btn, true);
   const resultWrap = document.getElementById('llm-result-wrap');
   const resultBody = document.getElementById('llm-result-body');
   resultWrap.style.display = 'block';
@@ -850,7 +881,7 @@ async function llmAutoAssign() {
           <div class="llm-row">
             <span class="ic-ok" aria-hidden="true">${iconRef('icon-circle-check',18)}</span>
             <div style="flex:1">
-              <div style="font-size:13px;font-weight:500">${a.customerName} → Table ${a.tableId}</div>
+              <div style="font-size:13px;font-weight:500">${a.customerName} → Table ${a.tableCode || a.tableId}</div>
               <div style="font-size:11px;color:var(--text2);margin-top:2px">${a.reason || ''}</div>
             </div>
           </div>`).join('')}`;
@@ -862,7 +893,7 @@ async function llmAutoAssign() {
   } catch (err) {
     resultBody.innerHTML = `<div style="color:var(--amber);font-size:12px;padding:8px">LLM unavailable (${err.message}) — try rule-based assign.</div>`;
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = `${iconRef('icon-sparkles')} LLM Auto-Assign`; }
+    setLoading(btn, false);
   }
 }
 
@@ -895,7 +926,7 @@ function renderAdminSidebar() {
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button type="button" class="btn btn-primary btn-sm" onclick="openAssignForCustomer('${c.id}')">Seat</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="removeFromQueue('${c.id}')">${iconRef('icon-trash',14)}</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="removeFromQueue('${c.id}', this)">${iconRef('icon-trash',14)}</button>
         </div>
       </div>`).join('');
   }
@@ -917,7 +948,8 @@ function renderLog() {
     </div>`).join('');
 }
 
-async function removeFromQueue(id) {
+async function removeFromQueue(id, btn) {
+  setLoading(btn, true);
   try {
     await apiFetch(`/api/queue/${id}`, { method: 'DELETE' });
     await loadState();
@@ -926,6 +958,8 @@ async function removeFromQueue(id) {
     toast('Removed from queue', 'success');
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    setLoading(btn, false);
   }
 }
 
@@ -938,12 +972,13 @@ function pickParty(n) {
     b.classList.toggle('sel', Number(b.dataset.s) === n));
 }
 
-async function joinQueue() {
+async function joinQueue(btn) {
   const name  = document.getElementById('c-name').value.trim();
   const phone = document.getElementById('c-phone').value.trim();
   if (!name)      { toast('Please enter your name', 'error'); return; }
   if (!custParty) { toast('Please select party size', 'error'); return; }
 
+  setLoading(btn, true);
   try {
     const c = await apiFetch('/api/queue/join', {
       method: 'POST',
@@ -958,6 +993,8 @@ async function joinQueue() {
     await pollCustomerStatus();
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    setLoading(btn, false);
   }
 }
 
@@ -1003,11 +1040,11 @@ function renderCustomerView(c) {
     if (notif) {
       notif.style.display = 'block';
       document.getElementById('cust-notif-text').innerHTML =
-        `Please proceed to <strong>Table ${c.tableId}</strong>${c.tableInfo ? ' in ' + c.tableInfo.zone : ''}<br>Please arrive within 5 minutes.`;
+        `Please proceed to <strong>Table ${c.tableInfo?.code || c.tableId}</strong>${c.tableInfo ? ' in ' + c.tableInfo.zone : ''}<br>Please arrive within 5 minutes.`;
     }
     if (trRow) {
       trRow.style.display = 'block';
-      document.getElementById('qs-table-id').textContent   = c.tableId;
+      document.getElementById('qs-table-id').textContent   = c.tableInfo?.code || c.tableId;
       document.getElementById('qs-table-zone').textContent = c.tableInfo?.zone || '';
     }
     if (floorSec) {
@@ -1022,15 +1059,21 @@ function renderCustomerView(c) {
   }
 }
 
-async function leaveQueue() {
+async function leaveQueue(btn) {
   if (!custSessionToken) return;
+  setLoading(btn, true);
   // Find customer by token via status endpoint, then delete
   try {
     const c = await fetch(`/api/queue/status?token=${custSessionToken}`).then(r => r.json());
-    if (c.id && authToken) {
-      await apiFetch(`/api/queue/${c.id}`, { method: 'DELETE' });
+    if (c.id) {
+      // Best effort delete if we have auth or if server allows token-based delete
+      // Note: currently delete requires auth, but we want to allow users to leave.
+      // If no auth, we just clear local session.
+      if (authToken) await apiFetch(`/api/queue/${c.id}`, { method: 'DELETE' });
     }
-  } catch { /* best-effort */ }
+  } catch { /* best-effort */ } finally {
+    setLoading(btn, false);
+  }
   custSessionToken = null;
   sessionStorage.removeItem('tf_cust_token');
   custParty = null;
@@ -1045,12 +1088,14 @@ async function leaveQueue() {
 // ============================================================
 // STAFF — LOGIN SCREEN (replaces hardcoded PIN with real auth)
 // ============================================================
-async function staffLoginSubmit() {
+async function staffLoginSubmit(btn) {
   const email    = document.getElementById('staff-email')?.value.trim();
   const password = document.getElementById('staff-password')?.value;
   const errEl    = document.getElementById('staff-login-error');
   if (!email || !password) { if(errEl) errEl.textContent='Enter email and password.'; return; }
 
+  setLoading(btn, true);
+  if(errEl) errEl.textContent = '';
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -1075,6 +1120,8 @@ async function staffLoginSubmit() {
     renderStaffDash();
   } catch (err) {
     if(errEl) errEl.textContent = err.message || 'Login failed';
+  } finally {
+    setLoading(btn, false);
   }
 }
 
@@ -1106,16 +1153,16 @@ function renderStaffDash() {
   el.innerHTML = tables.map(t => {
     const c = SC[t.status];
     const actions = [];
-    if (t.status === 'cleaning') actions.push(`<button type="button" class="btn btn-green btn-sm" onclick="staffAction('${t.id}','available')">${iconRef('icon-check')} Mark Available</button>`);
-    if (t.status === 'reserved') actions.push(`<button type="button" class="btn btn-primary btn-sm" onclick="staffAction('${t.id}','occupied')">Arrive</button><button type="button" class="btn btn-ghost btn-sm" onclick="staffAction('${t.id}','available')">Cancel Reserve</button>`);
-    if (t.status === 'occupied') actions.push(`<button type="button" class="btn btn-amber btn-sm" onclick="staffAction('${t.id}','cleaning')">${iconRef('icon-brush')} Start Cleaning</button>`);
+    if (t.status === 'cleaning') actions.push(`<button type="button" class="btn btn-green btn-sm" onclick="staffAction('${t.id}','available', this)">${iconRef('icon-check')} Mark Available</button>`);
+    if (t.status === 'reserved') actions.push(`<button type="button" class="btn btn-primary btn-sm" onclick="staffAction('${t.id}','occupied', this)">偏rive</button><button type="button" class="btn btn-ghost btn-sm" onclick="staffAction('${t.id}','available', this)">Cancel Reserve</button>`);
+    if (t.status === 'occupied') actions.push(`<button type="button" class="btn btn-amber btn-sm" onclick="staffAction('${t.id}','cleaning', this)">${iconRef('icon-brush')} Start Cleaning</button>`);
     return `
       <div class="staff-card">
         <div class="staff-type-ic" style="width:38px;height:38px;border-radius:8px;flex-shrink:0;background:${c?.fill||'transparent'};border:1px solid ${c?.stroke||'#ccc'};color:${c?.text||'#888'}">
           ${t.type==='private'?iconRef('icon-door',22):t.type==='booth'?iconRef('icon-booth',22):iconRef('icon-circle',22)}
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:500">Table ${t.id} <span style="font-size:12px;font-weight:400;color:${c?.text||'#888'}">— ${t.status}</span></div>
+          <div style="font-size:14px;font-weight:500">Table ${t.code} <span style="font-size:12px;font-weight:400;color:${c?.text||'#888'}">— ${t.status}</span></div>
           <div style="font-size:12px;color:var(--text2);margin-top:2px">${t.seats} seats · ${t.zone}${t.guest?' · '+t.guest:''}</div>
           <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${actions.join('')||'<span style="font-size:12px;color:var(--text3)">No actions needed</span>'}</div>
         </div>
@@ -1123,18 +1170,20 @@ function renderStaffDash() {
   }).join('');
 }
 
-async function staffAction(tableId, newStatus) {
-  await setTableStatus(tableId, newStatus);
+async function staffAction(tableId, newStatus, btn) {
+  await setTableStatus(tableId, newStatus, btn);
 }
 
 // ============================================================
 // LOGIN MODAL — Admin login (separate from staff tab)
 // ============================================================
-async function adminLoginSubmit() {
+async function adminLoginSubmit(btn) {
   const email    = document.getElementById('admin-email')?.value.trim();
   const password = document.getElementById('admin-password')?.value;
   const errEl    = document.getElementById('admin-login-error');
 
+  setLoading(btn, true);
+  if(errEl) errEl.textContent = '';
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -1159,6 +1208,8 @@ async function adminLoginSubmit() {
     toast(`Logged in as ${authUser.name || authUser.email}`, 'success');
   } catch (err) {
     if(errEl) errEl.textContent = err.message || 'Login failed';
+  } finally {
+    setLoading(btn, false);
   }
 }
 

@@ -102,7 +102,7 @@ If no assignments are possible, return [].`;
 
       // Mark table as used so subsequent loop iterations don't double-assign
       t.status = 'OCCUPIED';
-      applied.push({ customerId: c.id, customerName: c.name, tableId: t.id, reason: a.reason });
+      applied.push({ customerId: c.id, customerName: c.name, tableId: t.id, tableCode: t.code, reason: a.reason });
     }
 
     // Re-number queue
