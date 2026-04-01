@@ -1,0 +1,132 @@
+// TableFlow — Prisma schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  displayName String   @default("")  // shown in UI e.g. "Spice Garden"
+  createdAt   DateTime @default(now())
+
+  users       Membership[]
+  tables      FloorTable[]
+  customers   Customer[]
+  queueEntries QueueEntry[]
+  auditEvents AuditEvent[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String   @default("")
+  createdAt    DateTime @default(now())
+
+  memberships  Membership[]
+  auditEvents  AuditEvent[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role         @default(STAFF)
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+model FloorTable {
+  id             String      @id  // e.g. "T1", "B3", "R1"
+  organizationId String
+  code           String      // same as id, kept for clarity
+  label          String      // "Round table", "Booth", etc.
+  zone           String      // "Center", "Main floor", etc.
+  seats          Int
+  tableType      String      // "round4", "round6", "booth", "private", "round2"
+  status         TableStatus @default(AVAILABLE)
+  guestName      String?
+  x              Float
+  y              Float
+  r              Float?      // radius for round tables
+  w              Float?      // width for rectangular tables
+  h              Float?      // height for rectangular tables
+  occupantId     String?     // Customer.id currently seated
+  updatedAt      DateTime    @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer?    @relation(fields: [occupantId], references: [id])
+
+  @@unique([organizationId, code])
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  RESERVED
+}
+
+model Customer {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  phone          String?
+  partySize      Int
+  status         CustomerStatus @default(WAITING)
+  sessionToken   String?        @unique  // for anonymous polling
+  tableId        String?        // assigned table code
+  joinedAt       DateTime       @default(now())
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  queueEntry     QueueEntry?
+  seatedAt       FloorTable[]
+}
+
+enum CustomerStatus {
+  WAITING
+  NOTIFIED
+  SEATED
+  LEFT
+  DONE
+}
+
+model QueueEntry {
+  id             String       @id @default(cuid())
+  organizationId String
+  customerId     String       @unique
+  position       Int          // explicit position for easy ordering
+  joinedAt       DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model AuditEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  action         String
+  payload        Json?
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor          User?        @relation(fields: [actorUserId], references: [id])
+}

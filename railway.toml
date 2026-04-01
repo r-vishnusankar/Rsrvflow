@@ -1,0 +1,10 @@
+# railway.toml — Railway deployment config
+# Push to GitHub → Railway auto-deploys
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npx prisma migrate deploy && node src/server.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
