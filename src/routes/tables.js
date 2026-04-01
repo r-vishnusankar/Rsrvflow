@@ -1,7 +1,6 @@
 const router = require('express').Router();
 const { z } = require('zod');
 const { prisma, requireAuth, requireAdmin } = require('../middleware/auth');
-const { z } = require('zod');
 
 // GET /api/tables/public — public floor plan info (no auth)
 router.get('/public', async (req, res) => {
